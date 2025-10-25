@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Whats-like Secure Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+            --bg: #eef2f7;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --primary: #2563eb;
+            --primary-contrast: #ffffff;
+            --mine-bg: #dcf8c6;
+            --theirs-bg: #ffffff;
+            --sys-bg: #f1f5f9;
+            --border: #e2e8f0;
+        }
+        [data-theme="dark"] {
+            --bg: #0b1220;
+            --card: #121824;
+            --text: #e5e7eb;
+            --muted: #9aa5b1;
+            --primary: #60a5fa;
+            --primary-contrast: #0b1220;
+            --mine-bg: #063f2a;
+            --theirs-bg: #0e1726;
+            --sys-bg: #1c2534;
+            --border: #192233;
+        }
+
+        body { margin: 0; background: radial-gradient(1200px 600px at 20% 0%, rgba(37,99,235,0.06), transparent 60%), var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+        .container { max-width: 880px; margin: 28px auto; padding: 16px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.08); overflow: hidden; }
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+        .brand { display: flex; align-items: center; gap: 8px; }
+        .logo { width: 24px; height: 24px; color: var(--primary); }
+        .title { font-weight: 600; letter-spacing: 0.2px; }
+        #connectedStatus { padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; font-size: 12px; background: var(--sys-bg); color: var(--muted); }
+
+        .controls { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+        .controls input[type="text"] { flex: 1; min-width: 200px; }
+        input, button { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); transition: box-shadow .18s ease, transform .06s ease; }
+        input:focus { outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,0.18); }
+        button.primary { background: var(--primary); color: var(--primary-contrast); border: none; }
+        button:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(0,0,0,0.06); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; transform: none; }
+
+        #chat { height: 420px; overflow-y: auto; padding: 18px; background: linear-gradient(180deg, rgba(0,0,0,0.02), transparent); padding-bottom: 72px; }
+
+        .bubble { max-width: 72%; margin: 8px 0; padding: 10px 14px; border-radius: 16px; position: relative; word-wrap: break-word; line-height: 1.35; transition: transform .06s ease, box-shadow .18s ease; }
+        .bubble:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.06); }
+        .mine { margin-left: auto; background: var(--mine-bg); }
+        .mine::after { content: ''; position: absolute; right: -6px; bottom: 0; width: 0; height: 0; border-left: 8px solid var(--mine-bg); border-top: 8px solid transparent; border-bottom: 8px solid transparent; }
+        .theirs { margin-right: auto; background: var(--theirs-bg); border: 1px solid var(--border); }
+        .theirs::before { content: ''; position: absolute; left: -6px; bottom: 0; width: 0; height: 0; border-right: 8px solid var(--theirs-bg); border-top: 8px solid transparent; border-bottom: 8px solid transparent; }
+        .sys { margin: 10px auto; font-size: 13px; color: var(--muted); background: var(--sys-bg); border: 1px dashed var(--border); padding: 8px 10px; border-radius: 10px; max-width: 60%; text-align: center; }
+        .timestamp { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+        /* Media file styles */
+        .file-bubble { display: flex; flex-direction: column; }
+        .file-preview { max-width: 240px; max-height: 180px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border); object-fit: cover; }
+        .file-info { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .file-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+        .file-size { color: var(--muted); font-size: 12px; }
+        .file-download { color: var(--primary); text-decoration: none; margin-top: 4px; font-size: 12px; }
+        
+        /* Media picker */
+        .media-picker { position: fixed; bottom: 80px; right: 30px; z-index: 100; }
+        .media-picker-btn { width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .media-picker-btn svg { width: 24px; height: 24px; }
+        .media-picker-menu { position: absolute; bottom: 70px; right: 0; background: var(--card); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); padding: 8px; display: none; flex-direction: column; gap: 8px; min-width: 180px; border: 1px solid var(--border); }
+        .media-picker-menu.active { display: flex; }
+        .media-option { display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+        .media-option:hover { background: var(--sys-bg); }
+        .media-option svg { width: 20px; height: 20px; color: var(--primary); }
+        .media-option-label { font-size: 14px; }
+        
+        /* New: footer/composer and typing bubble */
+        .footer { position: sticky; bottom: 0; background: linear-gradient(180deg, transparent, rgba(0,0,0,0.03)); padding: 12px 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+        .typing-bubble { width: fit-content; padding: 6px 10px; background: var(--sys-bg); color: var(--muted); border: 1px solid var(--border); border-radius: 999px; font-size: 12px; }
+        .composer { display: flex; gap: 8px; align-items: center; }
+        .composer textarea { flex: 1; min-height: 44px; max-height: 120px; resize: none; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--border); background: #f8fafc; }
+        .composer textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,0.18); background: #ffffff; }
+        .composer button { height: 44px; border-radius: 12px; font-weight: 600; }
+        .composer .primary { background: linear-gradient(180deg, var(--primary), #1d4ed8); color: var(--primary-contrast); border: none; }
+        .composer .attach-btn { background: transparent; border: none; padding: 0; width: 44px; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+        .composer .attach-btn:hover { color: var(--primary); }
+
+        #typingIndicator { height: 22px; }
+        .dot { display: inline-block; width: 6px; height: 6px; background: var(--muted); border-radius: 50%; margin: 0 2px; animation: blink 1s infinite alternate; vertical-align: middle; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink { from { opacity: 0.35; transform: translateY(0); } to { opacity: 1; transform: translateY(-1px); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <div class="brand">
+                    <svg class="logo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path d="M4 5a3 3 0 013-3h10a3 3 0 013 3v9a3 3 0 01-3 3H9l-5 4v-4a3 3 0 01-3-3V5z"></path>
+                    </svg>
+                    <div class="title">Secret Code Chat</div>
+                </div>
+                <div id="connectedStatus">Not connected</div>
+            </div>
+
+            <div class="controls">
+                <button id="generateBtn" class="primary">Generate Code</button>
+                <input id="codeInput" type="text" placeholder="Enter secret code" />
+                <button id="copyBtn">Copy Code</button>
+                <button id="connectBtn">Connect</button>
+                <button id="logoutBtn" disabled>Logout</button>
+                <button id="themeToggle">Toggle Theme</button>
+            </div>
+
+            <div id="chat"></div>
+
+            <div class="footer">
+                <div id="typingIndicator" class="typing-bubble" aria-live="polite" role="status"></div>
+                <div class="composer">
+                    <button id="attachBtn" class="attach-btn" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"></path>
+                        </svg>
+                    </button>
+                    <!-- Hidden file input used by the paperclip -->
+                    <input type="file" id="fileInput" style="display:none"
+                           accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" />
+                    <textarea id="messageInput" placeholder="Type a message…" disabled></textarea>
+                    <button id="sendBtn" class="primary" disabled aria-label="Send message">Send</button>
+                </div>
+            </div>
+            
+            <!-- Removed floating + media picker button and menu -->
+            <div class="media-picker">
+                <button id="mediaPickerBtn" class="media-picker-btn" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"></path>
+                    </svg>
+                </button>
+                <div id="mediaPickerMenu" class="media-picker-menu">
+                    <div class="media-option" id="photoOption">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        <span class="media-option-label">Photo</span>
+                    </div>
+                    <div class="media-option" id="videoOption">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                        </svg>
+                        <span class="media-option-label">Video</span>
+                    </div>
+                    <div class="media-option" id="documentOption">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        <span class="media-option-label">Document</span>
+                    </div>
+                </div>
+                <input type="file" id="fileInput" style="display: none" accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" />
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="./app.js"></script>
+</body>
+</html>
